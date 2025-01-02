@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2019",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@common/classes/*": ["src/common/classes/*"],
+      "@common/constants": ["src/common/constants/index"],
+      "@common/decorators/*": ["src/common/decorators/*"],
+      "@common/dtos": ["src/common/dtos/index"],
+      "@common/enums": ["src/common/enums/index"],
+      "@common/guards": ["src/common/guards/index"],
+      "@common/helpers/*": ["src/common/helpers/*"],
+      "@common/interfaces/*": ["src/common/interfaces/*"],
+      "@common/loaders": ["src/common/loaders/index"],
+      "@common/modules/*": ["src/common/modules/*"],
+      "@common/pipes": ["src/common/pipes/index"],
+      "@common/plugins/*": ["src/common/plugins/*"],
+      "@common/schemas/*": ["src/common/schemas/*"],
+      "@common/strategies": ["src/common/strategies/index"],
+      "@common/utils/*": ["src/common/utils/*"],
+      "@common": ["src/common/index"],
+      "@shared/*": ["src/modules/shared/*"],
+      "@user/*": ["src/modules/user/*"],
+      "@admin/*": ["src/modules/admin/*"]
+    }
+  }
+}
