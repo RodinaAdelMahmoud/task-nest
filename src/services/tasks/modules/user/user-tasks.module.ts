@@ -4,10 +4,13 @@ import { PassportModule } from '@nestjs/passport';
 import { UserTasksController } from './controllers/task.controller';
 import { UserTasksService } from './controllers/task.service';
 import { TaskMongooseModule } from '@common/modules/mongoose/task';
+import { CategoryMongooseModule } from '@common/modules/mongoose/category';
 
 @Module({
   imports: [
     TaskMongooseModule,
+    CategoryMongooseModule,
+
     PassportModule.register({ session: false, property: 'user' }),
     AwsS3Module.registerAsync({
       useFactory: (appConfig: AppConfig) => ({

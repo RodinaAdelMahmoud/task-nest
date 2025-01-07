@@ -49,7 +49,7 @@ export function categorySchemaFactory(connection: Connection) {
     await validateSchema(this, Category);
   });
 
-  const taskModel = connection.model(ModelNames.CATEGORY, CategorySchema);
+  const categoryModel = connection.model(ModelNames.CATEGORY, CategorySchema);
 
-  return taskModel;
+  return categoryModel;
 }

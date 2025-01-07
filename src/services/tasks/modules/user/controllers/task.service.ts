@@ -7,28 +7,39 @@ import { CreateTaskDto } from '../../dto/user/create-task.dto';
 import { ListTasksQueryDto } from '../../dto/user/list-my-tasks.dto';
 import { UpdateTaskDto } from '../../dto/user/update-task.dto';
 import { errorManager } from '../../shared/config/error.config';
+import { ICategoryModel } from '@common/schemas/mongoose/category';
 
 @Injectable()
 export class UserTasksService {
-  constructor(@Inject(ModelNames.TASK) private taskModel: ITaskModel, private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    @Inject(ModelNames.TASK) private taskModel: ITaskModel,
+    @Inject(ModelNames.CATEGORY) private categoryModel: ICategoryModel,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   // Create a new task for the user
   async createNewTask(userId: string, body: CreateTaskDto) {
     if (body.dueDate < new Date()) {
-      throw new ConflictException(errorManager.INVALID_DATE);
+      throw new ConflictException('Invalid due date');
+    }
+
+    const category = await this.categoryModel.findOne({ title: body.category, isDeleted: false });
+    if (!category) {
+      throw new NotFoundException(`Category with title "${body.category}" not found`);
     }
 
     const newTask = new this.taskModel({
       ...body,
-      createdBy: new Types.ObjectId(userId),
-      priority: body.priority,
+      category: category._id,
     });
 
     const savedTask = await newTask.save();
 
+    category.tasks.push(savedTask._id);
+    await category.save();
+
     return savedTask;
   }
-
   // Paginate tasks for the user
   async paginateTasks(userId: string, query: ListTasksQueryDto) {
     const { page, limit, status, category, sortBy } = query;
@@ -86,9 +97,9 @@ export class UserTasksService {
   // Delete a task by its ID for the user
   async deleteTask(taskId: string) {
     const task = await this.taskModel.findOneAndUpdate(
-      { _id: taskId, isDeleted: false }, // Ensure task belongs to the user and isn't already deleted
-      { isDeleted: true }, // Mark as deleted
-      { new: true }, // Return the updated document
+      { _id: taskId, isDeleted: false },
+      { isDeleted: true },
+      { new: true },
     );
 
     if (!task) {

@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthenticationServiceModule } from './services';
 import { TasksServiceModule } from './services/tasks/tasks-service.module';
 import { UsersServiceModule } from './services/users/users-service.module';
-import { CategoryModule } from './services/category/category.module';
+import { CategoryModule } from './services/category/category-service.module';
 
 @Module({
   imports: [
