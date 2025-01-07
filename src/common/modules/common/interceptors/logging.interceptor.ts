@@ -19,7 +19,6 @@ export class LoggingInterceptor implements NestInterceptor {
 
         if (
           request.url.includes('authentication/user/authentication') ||
-          request.url.includes('authentication/admin/authentication') ||
           request.url.includes('authentication/employee/authentication')
         )
           return;
@@ -32,7 +31,7 @@ export class LoggingInterceptor implements NestInterceptor {
         this.logger.log(logMessage, {
           request: { headers: request.headers, body: request.body, query: request.query, params: request.params },
           response: res,
-          persona: { ...persona, role: this.logger.getRole(persona) },
+          persona, // No need to add 'role' unless explicitly required elsewhere
           http: {
             method: request.method,
             url: request.url,

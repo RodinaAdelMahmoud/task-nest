@@ -9,10 +9,7 @@ import { CustomLoggerService } from '@common/modules/common/services/logger';
 
 @Catch()
 export class ExceptionFilter extends BaseExceptionFilter {
-  constructor(
-    private appConfig: AppConfig,
-    private logger: CustomLoggerService,
-  ) {
+  constructor(private appConfig: AppConfig, private logger: CustomLoggerService) {
     super();
   }
 
@@ -62,7 +59,7 @@ export class ExceptionFilter extends BaseExceptionFilter {
 
     this.logger.error(logMessage + ` - error: ${exception.message} ${exception.stack}`, {
       request: { headers: request.headers, body: request.body, query: request.query, params: request.params },
-      persona: { ...request.persona, role: this.logger.getRole(request.persona) },
+      persona: { ...request.persona, role: request.persona?.role || 'unknown' },
       exception: exceptionBody,
       http: {
         method: request.method,

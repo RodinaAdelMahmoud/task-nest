@@ -1,10 +1,9 @@
 import { CustomError } from '@common/classes/custom-error.class';
-import { JWT_GUARD_METADATA_KEY, ModelNames } from '@common/constants';
+import { JWT_GUARD_METADATA_KEY } from '@common/constants';
 import { EnvironmentEnum, ErrorType } from '@common/enums';
 import { PersonaTypeEnum } from '@common/interfaces/jwt-persona/base-jwt-persona.interface';
 import { AppConfig } from '@common/modules/env-config/services/app-config';
-import { IAdminModel } from '@common/schemas/mongoose/admin/admin.type';
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '@liaoliaots/nestjs-redis';
@@ -14,8 +13,8 @@ import Redis from 'ioredis';
 @Injectable()
 export class JwtVerifyGuard implements CanActivate {
   private readonly redis: Redis;
+
   constructor(
-    @Inject(ModelNames.ADMIN) private readonly adminModel: IAdminModel,
     private readonly appConfig: AppConfig,
     private readonly redisService: RedisService,
     private readonly jwtService: JwtService,
@@ -32,22 +31,22 @@ export class JwtVerifyGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const url = request.url;
+    const token = request?.headers?.authorization?.split(' ')[1];
 
-    let hasUrl = false;
-    let isAdmin = false;
-
-    if (typeof url === 'string') {
-      const callingContext = url.split('/')[2];
-      callingContext === 'admin' ? (isAdmin = true) : (isAdmin = false);
-      hasUrl = true;
+    if (!token) {
+      throw new UnauthorizedException(
+        new CustomError({
+          localizedMessage: {
+            en: 'No token provided',
+            ar: 'لم يتم توفير رمز تحقيق',
+          },
+          errorType: ErrorType.UNAUTHORIZED,
+          event: 'UNAUTHORIZED',
+        }),
+      );
     }
 
-    const req = context.switchToHttp().getRequest();
-
-    const token = req?.headers?.authorization?.split(' ')[1];
-
-    if (token) {
+    try {
       let decoded;
 
       try {
@@ -69,43 +68,19 @@ export class JwtVerifyGuard implements CanActivate {
         );
       }
 
-      //const isAdmin = decoded.type === PersonaTypeEnum.ADMIN;
-
-      try {
-        if (this.appConfig.NODE_ENV !== EnvironmentEnum.LOCAL) {
-          this.jwtService.verify(token, {
-            secret: isAdmin ? this.appConfig.ADMIN_JWT_SECRET : this.appConfig.USER_JWT_SECRET,
-          });
-        }
-
-        if (
-          !hasUrl ||
-          (isAdmin && decoded.type !== PersonaTypeEnum.ADMIN) ||
-          (!isAdmin && decoded.type !== PersonaTypeEnum.USER)
-        ) {
-          throw new Error();
-        }
-
-        req.persona = decoded;
-      } catch (error) {
-        throw new UnauthorizedException(
-          new CustomError({
-            localizedMessage: {
-              en: 'Invalid token',
-              ar: 'رمز غير صحيح',
-            },
-            errorType: ErrorType.UNAUTHORIZED,
-            event: 'UNAUTHORIZED',
-          }),
-        );
+      if (this.appConfig.NODE_ENV !== EnvironmentEnum.LOCAL) {
+        this.jwtService.verify(token, { secret: this.appConfig.USER_JWT_SECRET });
       }
 
-      const [sessions, entity] = await Promise.all([
-        this.redis.lrange(req.persona._id, 0, -1),
-        isAdmin ? this.adminModel.findById(req.persona._id).lean() : '',
-      ]);
+      if (decoded.type !== PersonaTypeEnum.USER) {
+        throw new Error();
+      }
 
-      if (!sessions?.length || !sessions?.includes(req.persona.sessionId) || !entity) {
+      request.persona = decoded;
+
+      const sessions = await this.redis.lrange(request.persona._id, 0, -1);
+
+      if (!sessions?.length || !sessions.includes(request.persona.sessionId)) {
         throw new UnauthorizedException(
           new CustomError({
             localizedMessage: {
@@ -117,18 +92,19 @@ export class JwtVerifyGuard implements CanActivate {
           }),
         );
       }
-      return true;
-    }
 
-    throw new UnauthorizedException(
-      new CustomError({
-        localizedMessage: {
-          en: 'No token provided',
-          ar: 'لم يتم توفير رمز تحقيق',
-        },
-        errorType: ErrorType.UNAUTHORIZED,
-        event: 'UNAUTHORIZED',
-      }),
-    );
+      return true;
+    } catch (error) {
+      throw new UnauthorizedException(
+        new CustomError({
+          localizedMessage: {
+            en: 'Invalid token',
+            ar: 'رمز غير صحيح',
+          },
+          errorType: ErrorType.UNAUTHORIZED,
+          event: 'UNAUTHORIZED',
+        }),
+      );
+    }
   }
 }

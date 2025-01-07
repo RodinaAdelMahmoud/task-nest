@@ -2,7 +2,6 @@ import { IsObject, ValidateNested, IsBoolean, IsString, IsEnum } from 'class-val
 import { Model } from 'mongoose';
 import { BaseModel, IBaseInstanceMethods } from '../../base/base-schema';
 import { AndroidVersion } from '../android-version';
-import { IosVersion } from '../ios-version';
 import { BackEndVersionsSubSchemaType } from './base-version-sub-schemas/backend-versions';
 import { VersionType } from './base-version.enum';
 
@@ -21,5 +20,3 @@ export class BaseVersion extends BaseModel<BaseVersion> {
 
 export interface IBaseVersionInstanceMethods extends IBaseInstanceMethods {}
 export interface IBaseVersionModel extends Model<BaseVersion, Record<string, unknown>, IBaseVersionInstanceMethods> {}
-
-export type AppVersion = AndroidVersion & IosVersion;

@@ -20,17 +20,14 @@ import {
   ErrorType,
   AppConfig,
   AwsS3Service,
-  GetImageDocumentPreSignedUrlQueryDto,
-  GetImagePreSignedUrlQueryDto,
 } from '@common';
-import { IUserModel, UserStatusEnum, User } from '@common/schemas/mongoose/user';
+import { IUserModel, User } from '@common/schemas/mongoose/user';
 
 import { errorManager } from '../shared/config/error.config';
 import * as crypto from 'crypto';
 import { escapeRegExp } from 'lodash';
 
 import { ChangeUserPasswordDto } from '../shared/dto/employees-profile/change-password.dto';
-import { EditProfileDto } from '../shared/dto/employees-profile/edit-profile.dto';
 
 @Injectable()
 export class UserProfilesService {
