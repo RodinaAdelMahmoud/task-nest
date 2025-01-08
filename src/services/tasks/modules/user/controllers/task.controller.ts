@@ -41,8 +41,7 @@ export class UserTasksController {
   @ApiOperation({ summary: 'Update a task by its ID for the user' })
   @Patch('user/private/tasks/:id')
   async updateTask(@Persona() userJwt: any, @Param('id') param: string, @Body() body: UpdateTaskDto) {
-    const result = await this.userTasksService.updateTask(userJwt._id, param, body);
-
+    const result = await this.userTasksService.updateTask(param, body);
     return new CustomResponse().success({
       payload: { data: result },
     });

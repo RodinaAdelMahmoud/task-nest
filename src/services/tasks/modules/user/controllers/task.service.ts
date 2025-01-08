@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PipelineStage, Types } from 'mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { addPaginationStages, ModelNames } from '@common';
@@ -8,12 +8,14 @@ import { ListTasksQueryDto } from '../../dto/user/list-my-tasks.dto';
 import { UpdateTaskDto } from '../../dto/user/update-task.dto';
 import { errorManager } from '../../shared/config/error.config';
 import { ICategoryModel } from '@common/schemas/mongoose/category';
+import { AuditLogService } from 'src/services/audit-log/modules/controllers/audit-log.service';
 
 @Injectable()
 export class UserTasksService {
   constructor(
     @Inject(ModelNames.TASK) private taskModel: ITaskModel,
     @Inject(ModelNames.CATEGORY) private categoryModel: ICategoryModel,
+    private readonly auditLogService: AuditLogService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -74,24 +76,62 @@ export class UserTasksService {
   }
 
   // Update a task by its ID for the user
-  async updateTask(taskId: string, param: string, body: UpdateTaskDto) {
-    const task = await this.taskModel.findOne({
-      _id: taskId,
-    });
+  async updateTask(taskId: string, body: UpdateTaskDto) {
+    const task = await this.taskModel.findById(taskId);
 
     if (!task) {
-      throw new NotFoundException(errorManager.TASK_NOT_FOUND);
+      throw new NotFoundException('Task not found');
     }
 
-    task.set({
-      ...body,
-      ...(body.priority && {
-        priority: body.priority,
-      }),
-    });
+    const oldValues = {
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      title: task.title,
+    };
+
+    const updatedValues = {
+      status: body.status ?? oldValues.status,
+      priority: body.priority ?? oldValues.priority,
+      dueDate: body.dueDate ?? oldValues.dueDate,
+      title: body.title ?? oldValues.title,
+    };
+
+    const changes = [];
+    for (const field of Object.keys(updatedValues)) {
+      if (updatedValues[field] !== oldValues[field]) {
+        changes.push({
+          field,
+          oldValue: oldValues[field],
+          newValue: updatedValues[field],
+          type: `${field} updated`,
+        });
+      }
+    }
+
+    if (changes.length === 0) {
+      throw new BadRequestException('No changes made');
+    }
+
+    // Update the task with new values
+    Object.assign(task, updatedValues);
     await task.save();
 
-    return task;
+    // Emit an event for each change
+    for (const change of changes) {
+      this.eventEmitter.emit('task.updated', {
+        taskId,
+        ...change,
+      });
+
+      // Log the change to the Audit Log
+      await this.auditLogService.logTaskChange(taskId, change.type, change.oldValue, change.newValue);
+    }
+
+    return {
+      message: 'Task updated successfully',
+      task: updatedValues,
+    };
   }
 
   // Delete a task by its ID for the user
@@ -105,6 +145,7 @@ export class UserTasksService {
     if (!task) {
       throw new NotFoundException(errorManager.TASK_NOT_FOUND);
     }
+    await this.auditLogService.logTaskChange(taskId, 'Task deleted', '', '');
 
     return task;
   }

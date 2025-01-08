@@ -5,4 +5,5 @@ export enum ModelNames {
   USER_TYPE = 'UserType',
   CATEGORY = 'Category',
   TASK = 'Task',
+  AUDIT_LOG = 'AuditLog',
 }

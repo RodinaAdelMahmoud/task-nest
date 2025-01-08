@@ -5,11 +5,16 @@ import { UserTasksController } from './controllers/task.controller';
 import { UserTasksService } from './controllers/task.service';
 import { TaskMongooseModule } from '@common/modules/mongoose/task';
 import { CategoryMongooseModule } from '@common/modules/mongoose/category';
+import { AuditLogMongooseModule } from '@common/modules/mongoose/audit-logs';
+// import { TaskEventsListener } from '../shared/config/task-events.listener';
+import { AuditLogModule } from 'src/services/audit-log/audit-log-service.module';
 
 @Module({
   imports: [
     TaskMongooseModule,
     CategoryMongooseModule,
+    AuditLogMongooseModule,
+    AuditLogModule,
 
     PassportModule.register({ session: false, property: 'user' }),
     AwsS3Module.registerAsync({

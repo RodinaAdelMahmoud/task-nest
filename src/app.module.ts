@@ -1,9 +1,10 @@
-import { AppConfig, CommonModule, EnvironmentEnum } from '@common';
+import { CommonModule } from '@common';
 import { Module } from '@nestjs/common';
 import { AuthenticationServiceModule } from './services';
 import { TasksServiceModule } from './services/tasks/tasks-service.module';
 import { UsersServiceModule } from './services/users/users-service.module';
 import { CategoryModule } from './services/category/category-service.module';
+import { AuditLogModule } from './services/audit-log/audit-log-service.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { CategoryModule } from './services/category/category-service.module';
     UsersServiceModule,
     AuthenticationServiceModule,
     CategoryModule,
+    AuditLogModule,
     CommonModule.registerAsync({
       appConfig: {
         appShortName: 'task-backend',
