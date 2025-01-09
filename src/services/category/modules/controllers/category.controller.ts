@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CategoriesService } from './category.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateCategoryDto } from '../dto/create-category.dto';
@@ -25,11 +25,15 @@ export class CategoryController {
   }
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a category' })
-  @Patch('user/private/category')
-  async updateCategory(
-    @Body() updateCategoryDto: UpdateCategoryDto, // Use UpdateCategoryDto here
-  ) {
-    return this.categoriesService.updateCategory(updateCategoryDto);
+  @Patch('user/private/category/:id')
+  async updateCategory(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+    const { newTitle } = updateCategoryDto;
+
+    if (!newTitle) {
+      throw new BadRequestException('New title is required');
+    }
+
+    return this.categoriesService.updateCategory(id, newTitle);
   }
 
   @ApiBearerAuth()

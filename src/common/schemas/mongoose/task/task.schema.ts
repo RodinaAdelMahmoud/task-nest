@@ -40,6 +40,10 @@ export const TaskSchema = new Schema<Task, ITaskModel>(
       required: true,
       default: false,
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

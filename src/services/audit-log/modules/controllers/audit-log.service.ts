@@ -20,7 +20,29 @@ export class AuditLogService {
   }
 
   // Get all audit logs
-  async getAllAuditLogs() {
-    return await this.auditLogModel.find().sort({ timestamp: -1 }).populate('modifiedBy', 'name');
+  async getAllAuditLogs(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const auditLogs = await this.auditLogModel
+      .find()
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('modifiedBy', 'name');
+
+    const totalAuditLogs = await this.auditLogModel.countDocuments();
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalAuditLogs / limit);
+
+    return {
+      auditLogs,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalAuditLogs,
+        limit,
+      },
+    };
   }
 }

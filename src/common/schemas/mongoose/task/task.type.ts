@@ -35,6 +35,9 @@ export class Task {
   @IsBoolean()
   @IsNotEmpty()
   isDeleted: boolean;
+
+  @IsBoolean()
+  isArchived: boolean;
 }
 
 export interface ITaskModel extends Model<Task, Record<string, unknown>> {}

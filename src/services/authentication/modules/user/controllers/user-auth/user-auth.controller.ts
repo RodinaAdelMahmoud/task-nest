@@ -21,13 +21,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserLoginEmailGuard, UserRefreshTokenGuard } from './guards';
 import { HydratedDocument } from 'mongoose';
 import { IUserInstanceMethods, User } from '@common/schemas/mongoose/user';
+import { IRefreshTokenPayload } from 'dist/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
 @ApiTags('Auth - User')
 @Controller()
 export class UserAuthController {
   constructor(private readonly userAuthService: UserAuthService) {}
 
   // Register Endpoint
-  @Post('register')
+  @Post('/public/register')
   @IsPrivateAuthOrPublic()
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async register(@Body() userRegisterDto: UserRegisterDto) {
@@ -47,6 +48,22 @@ export class UserAuthController {
 
     return new CustomResponse().success({
       payload: { data: loginPayload },
+    });
+  }
+
+  // refresh Token Endpoint
+  @ApiBearerAuth()
+  @UseGuards(UserRefreshTokenGuard)
+  @Post('private-auth/refresh-token')
+  async refreshToken(@Persona() payload: IRefreshTokenPayload) {
+    const user = await this.userAuthService.refreshUserTokens(payload);
+    return new CustomResponse().success({
+      payload: { data: user },
+      localizedMessage: {
+        en: 'Token refreshed successfully',
+        ar: 'تم تحديث الرقم السري بنجاح',
+      },
+      event: 'TOKEN_REFRESHED_SUCCESS',
     });
   }
 

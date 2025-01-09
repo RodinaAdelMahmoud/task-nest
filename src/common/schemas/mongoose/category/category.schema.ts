@@ -25,7 +25,6 @@ export const CategorySchema = new Schema<Category, ICategoryModel>(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
     },
 
     isDeleted: {

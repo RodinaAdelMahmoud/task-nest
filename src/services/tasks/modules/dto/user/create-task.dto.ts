@@ -1,6 +1,6 @@
-import { Task, TaskPriorityEnum } from '@common/schemas/mongoose/task';
 import { ApiProperty, PickType } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { IsMongoId, IsString } from 'class-validator';
+import { Task, TaskPriorityEnum } from '@common/schemas/mongoose/task';
 
 export class CreateTaskDto extends PickType(Task, ['title', 'dueDate', 'description', 'status', 'priority'] as const) {
   @ApiProperty({
@@ -9,12 +9,12 @@ export class CreateTaskDto extends PickType(Task, ['title', 'dueDate', 'descript
     enum: TaskPriorityEnum,
   })
   @IsString()
-  @IsEnum(TaskPriorityEnum)
   priority: TaskPriorityEnum;
+
   @ApiProperty({
-    example: 'title',
-    description: 'The category title of the task',
+    example: '64f5fa2e5e9d4e3b5f6c89d0',
+    description: 'The ID of the category associated with the task',
   })
-  @IsString()
+  @IsMongoId()
   category: string;
 }

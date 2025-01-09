@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PipelineStage, Types } from 'mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { addPaginationStages, ModelNames } from '@common';
@@ -19,30 +19,31 @@ export class UserTasksService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  // Create a new task for the user
+  //=====================  Create a new task for the user
   async createNewTask(userId: string, body: CreateTaskDto) {
-    if (body.dueDate < new Date()) {
-      throw new ConflictException('Invalid due date');
-    }
+    const { category: categoryId, ...taskData } = body;
 
-    const category = await this.categoryModel.findOne({ title: body.category, isDeleted: false });
+    // Validate the category ID
+    const category = await this.categoryModel.findOne({ _id: categoryId, isDeleted: false });
     if (!category) {
-      throw new NotFoundException(`Category with title "${body.category}" not found`);
+      throw new NotFoundException(`Category with ID "${categoryId}" not found`);
     }
 
     const newTask = new this.taskModel({
-      ...body,
-      category: category._id,
+      ...taskData,
+      category: categoryId,
     });
 
     const savedTask = await newTask.save();
 
+    // Add task to category's task list
     category.tasks.push(savedTask._id);
     await category.save();
 
     return savedTask;
   }
-  // Paginate tasks for the user
+
+  //=====================  Paginate tasks for the user
   async paginateTasks(userId: string, query: ListTasksQueryDto) {
     const { page, limit, status, category, sortBy } = query;
 
@@ -75,7 +76,7 @@ export class UserTasksService {
     return { data, total, limit, pages, page };
   }
 
-  // Update a task by its ID for the user
+  //=====================  Update a task by its ID for the user
   async updateTask(taskId: string, body: UpdateTaskDto) {
     const task = await this.taskModel.findById(taskId);
 
@@ -88,6 +89,7 @@ export class UserTasksService {
       priority: task.priority,
       dueDate: task.dueDate,
       title: task.title,
+      description: task.description,
     };
 
     const updatedValues = {
@@ -95,6 +97,7 @@ export class UserTasksService {
       priority: body.priority ?? oldValues.priority,
       dueDate: body.dueDate ?? oldValues.dueDate,
       title: body.title ?? oldValues.title,
+      description: body.description ?? oldValues.description,
     };
 
     const changes = [];
@@ -130,11 +133,11 @@ export class UserTasksService {
 
     return {
       message: 'Task updated successfully',
-      task: updatedValues,
+      task: task,
     };
   }
 
-  // Delete a task by its ID for the user
+  //=====================  Delete a task by its ID for the user
   async deleteTask(taskId: string) {
     const task = await this.taskModel.findOneAndUpdate(
       { _id: taskId, isDeleted: false },
@@ -148,5 +151,66 @@ export class UserTasksService {
     await this.auditLogService.logTaskChange(taskId, 'Task deleted', '', '');
 
     return task;
+  }
+
+  //===================== Archive a task
+  async archiveTask() {
+    const result = await this.taskModel.updateMany(
+      {
+        isArchived: false,
+        status: 'Done',
+      },
+      { $set: { isArchived: true } },
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('No tasks found to archive');
+    }
+
+    return {
+      message: 'Tasks archived successfully',
+      archivedCount: result.modifiedCount,
+    };
+  }
+
+  //===================== Get archived tasks
+  async getArchivedTasks(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const archivedTasks = await this.taskModel.find({ isArchived: true }).skip(skip).limit(limit);
+
+    const totalArchivedTasks = await this.taskModel.countDocuments({ isArchived: true });
+
+    const totalPages = Math.ceil(totalArchivedTasks / limit);
+
+    return {
+      archivedTasks,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalArchivedTasks,
+        limit,
+      },
+    };
+  }
+
+  //=====================  restore archived task
+  async restoreTask() {
+    const result = await this.taskModel.updateMany(
+      {
+        isArchived: true,
+        status: 'Done',
+      },
+      { $set: { isArchived: false } },
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('No tasks found');
+    }
+
+    return {
+      message: 'Tasks restored successfully',
+      restoredCount: result.modifiedCount,
+    };
   }
 }

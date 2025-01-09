@@ -36,6 +36,24 @@ export class UserTasksController {
     });
   }
 
+  // Archive a task by its ID for the user
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Archive a task ' })
+  @Patch('user/private/tasks/archive')
+  async archiveTask() {
+    const result = await this.userTasksService.archiveTask();
+    return result;
+  }
+
+  // restore archived task
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'restore a task ' })
+  @Get('user/private/tasks/restore')
+  async restoreTask() {
+    const result = await this.userTasksService.restoreTask();
+    return result;
+  }
+
   // Update a task by its ID for the user
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a task by its ID for the user' })
@@ -54,6 +72,17 @@ export class UserTasksController {
   async deleteTask(@Persona() userJwt: any, @Param('id') param: string) {
     const result = await this.userTasksService.deleteTask(param);
 
+    return new CustomResponse().success({
+      payload: { data: result },
+    });
+  }
+
+  // Get archived tasks for the user
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get archived tasks for the user' })
+  @Get('user/private/tasks/archive')
+  async getArchivedTasks() {
+    const result = await this.userTasksService.getArchivedTasks();
     return new CustomResponse().success({
       payload: { data: result },
     });

@@ -10,7 +10,4 @@ export class CreateCategoryDto {
   @IsEnum(CategoryTypeEnum, { message: 'Invalid category type' })
   @IsOptional()
   type?: CategoryTypeEnum;
-
-  @IsNotEmpty()
-  createdBy: Types.ObjectId;
 }

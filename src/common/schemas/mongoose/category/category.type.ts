@@ -15,7 +15,6 @@ export class Category {
   tasks: Types.ObjectId[];
 
   @IsObject()
-  @IsNotEmpty()
   createdBy: Types.ObjectId;
 
   @IsBoolean()

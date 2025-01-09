@@ -1,8 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @Controller('audit-log')
+@ApiTags('Audit Log')
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 

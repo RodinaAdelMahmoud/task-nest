@@ -11,6 +11,7 @@ import {
 } from './controllers';
 import { UserLoginEmailStrategy } from './controllers/user-auth/strategies/login-email/login-email.strategy';
 import { UserRefreshTokenStrategyService } from './controllers/user-auth/strategies/refresh-token/refresh-token-strategy.service';
+import { UserRefreshTokenStrategy } from './controllers/user-auth/strategies/refresh-token';
 
 @Module({
   imports: [UserMongooseModule, PassportModule.register({ session: false, property: 'persona' })],
@@ -20,6 +21,7 @@ import { UserRefreshTokenStrategyService } from './controllers/user-auth/strateg
 
     UserLoginEmailStrategy,
     UserLoginEmailGuard,
+    UserRefreshTokenStrategy,
     UserRefreshTokenStrategyService,
     UserRefreshTokenGuard,
 

@@ -21,6 +21,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { errorManager } from 'src/services/authentication/shared/config/errors.config';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
+import { IRefreshTokenPayload } from './../../../../../../../dist/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface.d';
 
 @Injectable()
 export class UserAuthService {
@@ -46,9 +47,10 @@ export class UserAuthService {
     }
 
     // Insert the user into the database
-    await this.userModel.create(userRegisterDto);
+    const newUser = await this.userModel.create(userRegisterDto);
+    const accessToken = await this.generateTokens(newUser);
 
-    return { message: 'User registered successfully' };
+    return { message: 'User registered successfully', newUser, accessToken };
   }
 
   // User Login
@@ -68,10 +70,28 @@ export class UserAuthService {
     }
 
     // Use the user object to generate tokens
-    return this.generateTokens(userWithPassReset); // Pass the entire user document
+    return this.generateTokens(userWithPassReset);
   }
 
-  // Forget Password (Send Reset Link)
+  // ----------------refresh Token -------------------------------------
+  async refreshUserTokens(payload: IRefreshTokenPayload) {
+    const { _id: userId, sessionId } = payload;
+
+    const [userSessions, user] = await Promise.all([
+      this.redis.lrange(userId, 0, -1),
+      this.userModel.findById(userId, { email: 1 }),
+    ]);
+
+    if (!userSessions?.length || !userSessions?.includes(sessionId)) {
+      throw new UnauthorizedException(errorManager.INVALID_ACCESS_TOKEN);
+    }
+
+    return {
+      ...user.toJSON(),
+      ...(await this.generateTokens(user)),
+    };
+  }
+  //----------------- Forget Password (Send Reset Link)-------------------------
   async forgetPassword({ email }: ForgetPasswordDto) {
     const user = await this.userModel.findOne({ email });
 
@@ -93,7 +113,8 @@ export class UserAuthService {
       body: `Your verification code is ${code}. This code expires in 10 minutes.`,
     });
   }
-  // Verify Forget Password
+
+  // ------------------Verify Forget Password------------------------------------
   async verifyForgetPasswordEmail({ code, email }: VerifyEmailDto) {
     const storedCode = await this.redis.get(`${email}-verify`);
 

@@ -3,7 +3,7 @@ import { ApiProperty, PartialType, PickType } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdateTaskDto extends PartialType(
-  PickType(Task, ['title', 'dueDate', 'status', 'description', 'priority', 'category'] as const),
+  PickType(Task, ['title', 'dueDate', 'status', 'description', 'priority'] as const),
 ) {
   @ApiProperty({
     example: 'medium',
