@@ -11,7 +11,7 @@ import { ReadConcernLevel, ReadPreferenceMode } from 'mongodb';
 import { Connection } from 'mongoose';
 import { HealthController } from './controllers';
 import { ExceptionFilter } from './filters';
-import { AdminPermissionGuard, ApiVersionGuard, JwtDecodeGuard, JwtVerifyGuard } from './guards';
+import { ApiVersionGuard, JwtDecodeGuard, JwtVerifyGuard } from './guards';
 import { LoggingInterceptor } from './interceptors';
 import { CommonModuleAsyncOptions } from './interfaces';
 import { createAsyncProviders } from './providers';
@@ -21,7 +21,6 @@ import { EnvConfigModule } from '../env-config/env-config.module';
 import { AppConfig } from '../env-config/services/app-config';
 import { EventListenerErrorHandlerService } from './services/event-listener-handlers';
 import { MongoDbHealthService } from './services/health-checks';
-import { AdminMongooseModule } from '@common/modules/mongoose/admin/admin.module';
 
 @Module({})
 export class CommonModule {
@@ -55,6 +54,7 @@ export class CommonModule {
       RedisModule.forRootAsync({
         imports: [],
         inject: [AppConfig],
+
         useFactory: async (appConfig: AppConfig): Promise<RedisModuleOptions> => {
           return {
             config: {
@@ -82,7 +82,6 @@ export class CommonModule {
         },
         inject: [AppConfig],
       }),
-      AdminMongooseModule,
     ];
 
     return {
@@ -98,17 +97,9 @@ export class CommonModule {
           provide: APP_GUARD,
           useClass: ApiVersionGuard,
         },
-        // {
-        //   provide: APP_GUARD,
-        //   useClass: JwtVerifyGuard,
-        // },
         {
           provide: APP_GUARD,
           useClass: JwtDecodeGuard,
-        },
-        {
-          provide: APP_GUARD,
-          useClass: AdminPermissionGuard,
         },
         {
           provide: APP_INTERCEPTOR,

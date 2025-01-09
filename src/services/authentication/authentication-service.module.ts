@@ -2,18 +2,12 @@ import { Module } from '@nestjs/common';
 import { AppConfig, AwsS3Module, AwsSESModule } from '@common';
 import { RouterModule } from '@nestjs/core';
 import { RedisModule, RedisModuleOptions } from '@liaoliaots/nestjs-redis';
-import { AdminAuthenticationModule, UserAuthenticationModule } from './modules';
+import { UserAuthenticationModule } from './modules';
 
 @Module({
   imports: [
-    // Register all the authentication Sub-modules
-    AdminAuthenticationModule,
-
     UserAuthenticationModule,
 
-    // Route all the authentication Sub-modules
-    RouterModule.register([{ path: 'authentication/admin', module: AdminAuthenticationModule }]),
-    // RouterModule.register([{ path: 'authentication/employee', module: EmployeeAuthenticationModule }]),
     RouterModule.register([{ path: 'authentication/user', module: UserAuthenticationModule }]),
 
     // General Module Imports

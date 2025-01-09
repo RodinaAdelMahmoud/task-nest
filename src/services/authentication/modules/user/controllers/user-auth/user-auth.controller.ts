@@ -1,29 +1,44 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { HydratedDocument } from 'mongoose';
-
-import { UserRefreshTokenGuard } from './guards/user-refresh-token.guard';
-import { UserLoginEmailGuard } from './guards/user-login-email.guard';
-
-import { UserJwtDecodeGuard } from './guards/user-jwt.guard';
-import { Persona, CustomResponse, IsPrivateAuthOrPublic } from '@common';
-import { User, IUserInstanceMethods } from '@common/schemas/mongoose/user';
-import { ForgetPasswordDto } from '../../../admin/controllers/admin-auth/dto/forget-password.dto';
-import { LoginEmailDto } from '../../../admin/controllers/admin-auth/dto/login-email.dto';
-import { ResetPasswordDto } from '../../../admin/controllers/admin-auth/dto/reset-password.dto';
-import { VerifyEmailDto } from '../../../admin/controllers/admin-auth/dto/verify-email.dto';
-import { IRefreshTokenPayload } from '../../../admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
-import { UserSuspendedGuard } from './guards';
-import { UserLoginEmailDto } from './dto/login-email.dto';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { UserAuthService } from './user-auth.service';
-
+import { UserRegisterDto } from './dto/register.dto';
+import { UserLoginEmailDto } from './dto/login-email.dto';
+import { ForgetPasswordDto } from './dto/forget-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { CustomResponse, IsPrivateAuthOrPublic, Persona } from '@common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UserLoginEmailGuard, UserRefreshTokenGuard } from './guards';
+import { HydratedDocument } from 'mongoose';
+import { IUserInstanceMethods, User } from '@common/schemas/mongoose/user';
+import { IRefreshTokenPayload } from 'dist/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
 @ApiTags('Auth - User')
 @Controller()
 export class UserAuthController {
   constructor(private readonly userAuthService: UserAuthService) {}
 
+  // Register Endpoint
+  @Post('/public/register')
   @IsPrivateAuthOrPublic()
-  @UseGuards(UserLoginEmailGuard, UserSuspendedGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async register(@Body() userRegisterDto: UserRegisterDto) {
+    const user = await this.userAuthService.register(userRegisterDto);
+    return { message: 'User registered successfully', user };
+  }
+
+  // Login Endpoint
+  @IsPrivateAuthOrPublic()
+  @UseGuards(UserLoginEmailGuard)
   @Post('public/login-email')
   async loginUserByEmail(
     @Persona() user: HydratedDocument<User, IUserInstanceMethods>,
@@ -36,12 +51,12 @@ export class UserAuthController {
     });
   }
 
+  // refresh Token Endpoint
   @ApiBearerAuth()
   @UseGuards(UserRefreshTokenGuard)
   @Post('private-auth/refresh-token')
   async refreshToken(@Persona() payload: IRefreshTokenPayload) {
     const user = await this.userAuthService.refreshUserTokens(payload);
-
     return new CustomResponse().success({
       payload: { data: user },
       localizedMessage: {
@@ -52,6 +67,7 @@ export class UserAuthController {
     });
   }
 
+  // Forget Password Endpoint
   @IsPrivateAuthOrPublic()
   @Get('public/forget-password')
   async forgetPassword(@Query() query: ForgetPasswordDto) {
@@ -65,7 +81,7 @@ export class UserAuthController {
       event: 'FORGET_PASSWORD_EMAIL_SUCCESS',
     });
   }
-
+  // Verify Forget Password Endpoint
   @IsPrivateAuthOrPublic()
   @Post('public/verify-forget-password-email')
   async verifyForgetPasswordEmail(@Body() body: VerifyEmailDto) {
@@ -75,7 +91,7 @@ export class UserAuthController {
       payload: { data: { accessToken } },
     });
   }
-
+  // Reset Password Endpoint
   @IsPrivateAuthOrPublic()
   @Post('public/reset-password')
   async resetForgetPassword(@Body() body: ResetPasswordDto) {
@@ -90,13 +106,4 @@ export class UserAuthController {
       event: 'RESET_FORGET_PASSWORD_SUCCESS',
     });
   }
-
-  // @ApiBearerAuth()
-  // @UseGuards(UserJwtDecodeGuard)
-  // @Post('private/logout')
-  // async logout(@Persona() userJWT: UserJwtPersona, @Body() body: UserLogoutDto) {
-  //   await this.userAuthService.logout(userJWT, body);
-
-  //   return new CustomResponse().success({});
-  // }
 }

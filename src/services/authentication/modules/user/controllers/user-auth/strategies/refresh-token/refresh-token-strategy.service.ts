@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserBaseAuthService } from './base-user-auth.service';
 import { ModelNames, AppConfig } from '@common';
 import { IUserModel } from '@common/schemas/mongoose/user';
-import { IRefreshTokenPayload } from 'src/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
+import { IRefreshTokenPayload } from './refresh-token-strategy-payload.interface';
 
 @Injectable()
 export class UserRefreshTokenStrategyService extends UserBaseAuthService {
@@ -20,9 +20,9 @@ export class UserRefreshTokenStrategyService extends UserBaseAuthService {
   async validateUserSession(payload: IRefreshTokenPayload) {
     const { _id, sessionId } = payload;
 
-    const userSessions = await this.redis.lrange(_id, 0, -1);
+    const adminSessions = await this.redis.lrange(_id, 0, -1);
 
-    if (!userSessions.includes(sessionId)) {
+    if (!adminSessions.includes(sessionId)) {
       return null;
     }
 

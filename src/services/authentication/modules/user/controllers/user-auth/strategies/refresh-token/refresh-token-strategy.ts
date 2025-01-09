@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserRefreshTokenStrategyService } from './refresh-token-strategy.service';
 import { AppConfig, CustomError, ErrorType } from '@common';
-import { IRefreshTokenPayload } from 'src/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
+import { IRefreshTokenPayload } from './refresh-token-strategy-payload.interface';
 
 @Injectable()
 export class UserRefreshTokenStrategy extends PassportStrategy(Strategy, 'user-refresh-token') {

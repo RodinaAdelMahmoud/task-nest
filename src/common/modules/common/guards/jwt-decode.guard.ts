@@ -1,4 +1,3 @@
-
 import { CustomError } from '@common/classes/custom-error.class';
 import { JWT_GUARD_METADATA_KEY } from '@common/constants';
 import { ErrorType } from '@common/enums';

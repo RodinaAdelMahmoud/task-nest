@@ -14,8 +14,10 @@ export class UserLoginEmailStrategy extends PassportStrategy(Strategy, 'user-log
   }
 
   async validate(email: string, password: string) {
+    console.log('Incoming email:', email);
     const user = await this.userModel.findOne({ email: email.toLowerCase() }, { email: 1, password: 1 });
-    console.log(user);
+    console.log('User found:', user);
+
     if (!user) {
       throw new UnauthorizedException(
         new CustomError({

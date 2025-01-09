@@ -33,7 +33,7 @@ export class AwsSESService {
           Data: subject,
         },
       },
-      Source: 'MOHAMEEK <info@spiritude.co>',
+      Source: 'TASK <info@spiritude.co>',
     });
 
     await this.sesClient.send(command);

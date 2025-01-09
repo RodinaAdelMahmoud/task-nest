@@ -1,15 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  BasePaginationQuery,
-  CustomResponse,
-  UserJwtPersona,
-  GetImageDocumentPreSignedUrlQueryDto,
-  GetImagePreSignedUrlQueryDto,
-  Persona,
-} from '@common';
+import { BasePaginationQuery, CustomResponse, UserJwtPersona, Persona } from '@common';
 import { UserJwtDecodeGuard, UserSuspendedGuard } from 'src/services/authentication/modules/user/controllers';
-import { EditProfileDto } from '../shared/dto/employees-profile/edit-profile.dto';
 import { UserProfilesService } from './user-profile.service';
 import { ChangeUserPasswordDto } from '../shared/dto/employees-profile/change-password.dto';
 

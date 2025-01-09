@@ -7,7 +7,7 @@ import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { Types } from 'mongoose';
 import { AppConfig } from '@common';
 import { IUserModel, User } from '@common/schemas/mongoose/user';
-import { ITempAccessTokenPayload } from 'src/services/authentication/modules/admin/controllers/admin-auth/interfaces/temp-access-token.interface';
+// import { ITempAccessTokenPayload } from 'src/services/authentication/modules/admin/controllers/admin-auth/interfaces/temp-access-token.interface';
 
 @Injectable()
 export class UserBaseAuthService {
@@ -20,32 +20,6 @@ export class UserBaseAuthService {
     protected readonly redisService: RedisService,
   ) {
     this.redis = this.redisService.getClient();
-  }
-
-  async handleAdminLoginAndGenerateTokens(userId: string | Types.ObjectId) {
-    const user = await this.userModel
-      .findById(userId)
-      .select({ _id: 1, email: 1, permissions: 1, passwordReset: 1, lastLogin: 1 });
-
-    if (user.lastLogin === null) {
-      user.set({ lastLogin: new Date() });
-      await user.save();
-
-      user.lastLogin = null;
-
-      return {
-        user,
-        ...(await this.generateTokens(user)),
-      };
-    }
-
-    user.set({ lastLogin: new Date() });
-    await user.save();
-
-    return {
-      user,
-      ...(await this.generateTokens(user)),
-    };
   }
 
   async generateAccessToken(user: HydratedDocument<User>, existingSessionId?: string) {
@@ -100,17 +74,5 @@ export class UserBaseAuthService {
       accessToken,
       refreshToken,
     };
-  }
-
-  generateTempAccessToken(userId: string) {
-    const payload: ITempAccessTokenPayload = {
-      _id: userId,
-      temp: true,
-    };
-
-    return this.jwtService.sign(payload, {
-      secret: this.appConfig.USER_JWT_SECRET,
-      expiresIn: '10m',
-    });
   }
 }

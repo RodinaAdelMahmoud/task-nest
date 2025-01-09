@@ -27,15 +27,12 @@ export * from '@common/helpers/redact-sensitive-data.helper';
 export * from '@common/helpers/services/index';
 export * from '@common/helpers/validation-error-parser.helper';
 export * from '@common/helpers/aggregation-pipeline-builder.helper';
-export * from '@common/helpers/atlas-search.helper';
 
 // Exporting interfaces
 export * from '@common/interfaces/app-bootstrap/index';
 export * from '@common/interfaces/app-config-options/index';
-export * from '@common/interfaces/deep-link/index';
 export * from '@common/interfaces/firebase-dynamic-link/index';
 export * from '@common/interfaces/jwt-persona/index';
-export * from '@common/interfaces/metadata/index';
 export * from '@common/interfaces/atlas-search/index';
 
 // Exporting loaders
@@ -81,14 +78,7 @@ export * from '@common/modules/common/services/logger/index';
 export * from '@common/modules/env-config/env-config.module';
 export * from '@common/modules/env-config/services/app-config/index';
 
-export * from '@common/modules/mongoose/admin/admin-fcm-token/index';
-export * from '@common/modules/mongoose/admin/admin-roles/index';
-export * from '@common/modules/mongoose/admin/admin.module';
-
 export * from '@common/modules/mongoose/app-versions/index';
-
-
-export * from '@common/modules/mongoose/common/index';
 
 // Exporting pipes
 export * from '@common/pipes';
@@ -99,38 +89,20 @@ export * from '@common/plugins/soft-delete';
 // Exporting schemas
 export * from '@common/schemas/joi/index';
 
-export * from '@common/schemas/mongoose/admin/admin-fcm-token/index';
-export * from '@common/schemas/mongoose/admin/admin-permissions/index';
-export * from '@common/schemas/mongoose/admin/admin-role/admin-role-listener/index';
-export * from '@common/schemas/mongoose/admin/admin-role/admin-role.enum';
-export * from '@common/schemas/mongoose/admin/admin-role/admin-role.type';
-export * from '@common/schemas/mongoose/admin/admin-role/admin-role.schema';
-export * from '@common/schemas/mongoose/admin/admin-subschemas/admin-role/index';
-export * from '@common/schemas/mongoose/admin/admin.enum';
-export * from '@common/schemas/mongoose/admin/admin.type';
-export * from '@common/schemas/mongoose/admin/admin.schema';
-
 export * from '@common/schemas/mongoose/app-versions/android-version/index';
 export * from '@common/schemas/mongoose/app-versions/base-version/base-version-sub-schemas/backend-versions/index';
 export * from '@common/schemas/mongoose/app-versions/base-version/base-version-sub-schemas/base-version/index';
 export * from '@common/schemas/mongoose/app-versions/base-version/base-version.enum';
 export * from '@common/schemas/mongoose/app-versions/base-version/base-version.schema';
 export * from '@common/schemas/mongoose/app-versions/base-version/base-version.type';
-export * from '@common/schemas/mongoose/app-versions/ios-version/index';
-
-
 
 export * from '@common/schemas/mongoose/base/base-schema/base.schema';
 export * from '@common/schemas/mongoose/base/base-schema/base.type';
 export * from '@common/schemas/mongoose/base/base-schema/index';
-
 
 export * from '@common/schemas/mongoose/common/dynamic-link/index';
 export * from '@common/schemas/mongoose/common/localized-text/index';
 export * from '@common/schemas/mongoose/common/media/index';
 export * from '@common/schemas/mongoose/common/point/index';
 
-
-
 // Exporting strategies
-export * from '@common/strategies';

@@ -1,31 +1,27 @@
 import {
-  BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-
-import { RedisService } from '@songkeys/nestjs-redis';
-import Redis from 'ioredis';
-import { HydratedDocument, Model, Types } from 'mongoose';
-import { GetMediaPreSignedUrlQueryDto } from 'src/common/dtos/get-pre-signed-url.dto';
-
-import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
-
-import { InjectModel } from '@nestjs/mongoose';
-import { ModelNames, AppConfig, AwsSESService, AwsS3Service, CustomError, ErrorType } from '@common';
-import { IUserModel, User, IUserInstanceMethods, UserStatusEnum } from '@common/schemas/mongoose/user';
-import { ForgetPasswordDto } from '../../../admin/controllers/admin-auth/dto/forget-password.dto';
-import { LoginEmailDto } from '../../../admin/controllers/admin-auth/dto/login-email.dto';
-import { ResetPasswordDto } from '../../../admin/controllers/admin-auth/dto/reset-password.dto';
-import { VerifyEmailDto } from '../../../admin/controllers/admin-auth/dto/verify-email.dto';
-import { ITempAccessTokenPayload } from '../../../admin/controllers/admin-auth/interfaces/temp-access-token.interface';
-import { IRefreshTokenPayload } from '../../../admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface';
-import { errorManager } from 'src/services/authentication/shared/config/errors.config';
+import { HydratedDocument } from 'mongoose';
+import { IUserModel, User, IUserInstanceMethods } from '@common/schemas/mongoose/user';
+import { UserRegisterDto } from './dto/register.dto';
 import { UserLoginEmailDto } from './dto/login-email.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { JwtService } from '@nestjs/jwt';
+import { ITempAccessTokenPayload } from './../../../../../../../dist/services/authentication/modules/admin/controllers/admin-auth/interfaces/temp-access-token.interface.d';
+import { AppConfig, AwsS3Service, AwsSESService, ModelNames } from '@common';
+import { Redis } from 'ioredis';
+import { RedisService } from '@liaoliaots/nestjs-redis';
+import { ForgetPasswordDto } from './dto/forget-password.dto';
+import { errorManager } from 'src/services/authentication/shared/config/errors.config';
+import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
+import { IRefreshTokenPayload } from './../../../../../../../dist/services/authentication/modules/admin/controllers/admin-auth/strategies/refresh-token/refresh-token-strategy-payload.interface.d';
 
 @Injectable()
 export class UserAuthService {
@@ -33,9 +29,7 @@ export class UserAuthService {
 
   constructor(
     @Inject(ModelNames.USER) private userModel: IUserModel,
-    // @Inject(ModelNames.USER_FCM_TOKEN) private userFCMTokenModel: IUserFCMTokenModel,
-    // private readonly userFCMService: UserFCMService,
-    // private readonly logger: CustomLoggerService,
+
     private readonly appConfig: AppConfig,
     private readonly jwtService: JwtService,
     private readonly sesService: AwsSESService,
@@ -44,49 +38,42 @@ export class UserAuthService {
   ) {
     this.redis = this.redisService.getClient();
   }
+  // User Registration
+  async register(userRegisterDto: UserRegisterDto) {
+    // Check if user already exists
+    const isUser = await this.userModel.findOne({ email: userRegisterDto.email });
+    if (isUser) {
+      throw new HttpException('User already exists', HttpStatus.CONFLICT);
+    }
 
+    // Insert the user into the database
+    const newUser = await this.userModel.create(userRegisterDto);
+    const accessToken = await this.generateTokens(newUser);
+
+    return { message: 'User registered successfully', newUser, accessToken };
+  }
+
+  // User Login
   async loginUser(payload: UserLoginEmailDto, user: HydratedDocument<User, IUserInstanceMethods>) {
     const { email, password } = payload;
-    const isPasswordMatched = await user.comparePassword(password);
 
+    // Compare the provided password with the user's hashed password
+    const isPasswordMatched = await user.comparePassword(password);
     if (!isPasswordMatched) {
       throw new UnauthorizedException(errorManager.INCORRECT_EMAIL_OR_PASSWORD);
     }
+
+    // Retrieve the user with the passwordReset field
     const userWithPassReset = await this.userModel.findOne({ email }).select('+passwordReset');
-
-    const _user = userWithPassReset.toObject();
-
-    if (!_user.passwordReset) {
-      // Redirect user to password reset page
-      throw new UnauthorizedException(
-        new CustomError({
-          localizedMessage: {
-            en: 'You need to reset your password.',
-            ar: 'يجب عليك إعادة تعيين كلمة المرور.',
-          },
-          event: 'PASSWORD_RESET_REQUIRED',
-          errorType: ErrorType.UNAUTHORIZED,
-        }),
-      );
+    if (!userWithPassReset) {
+      throw new UnauthorizedException(errorManager.INCORRECT_EMAIL_OR_PASSWORD);
     }
 
-    if (_user.status !== UserStatusEnum.ACTIVE) {
-      // Redirect user to password reset page
-      throw new UnauthorizedException(
-        new CustomError({
-          localizedMessage: {
-            en: 'Your account is not activated yet',
-            ar: 'لم يتم تنشيط حسابك بعد.',
-          },
-          event: 'ACCOUNT_NOT_ACTIVE',
-          errorType: ErrorType.UNAUTHORIZED,
-        }),
-      );
-    }
-
-    return this.handleUserLoginAndGenerateTokens(user._id);
+    // Use the user object to generate tokens
+    return this.generateTokens(userWithPassReset);
   }
 
+  // ----------------refresh Token -------------------------------------
   async refreshUserTokens(payload: IRefreshTokenPayload) {
     const { _id: userId, sessionId } = payload;
 
@@ -104,7 +91,7 @@ export class UserAuthService {
       ...(await this.generateTokens(user)),
     };
   }
-
+  //----------------- Forget Password (Send Reset Link)-------------------------
   async forgetPassword({ email }: ForgetPasswordDto) {
     const user = await this.userModel.findOne({ email });
 
@@ -127,6 +114,7 @@ export class UserAuthService {
     });
   }
 
+  // ------------------Verify Forget Password------------------------------------
   async verifyForgetPasswordEmail({ code, email }: VerifyEmailDto) {
     const storedCode = await this.redis.get(`${email}-verify`);
 
@@ -145,6 +133,7 @@ export class UserAuthService {
     return this.generateTempAccessToken(user._id?.toString());
   }
 
+  // Reset Password
   async resetPassword({ accessToken, newPassword }: ResetPasswordDto) {
     const { _id }: ITempAccessTokenPayload = this.validateTempAccessToken(accessToken);
 
@@ -162,6 +151,7 @@ export class UserAuthService {
     await user.save();
   }
 
+  // Validate Temp Access Token
   private validateTempAccessToken(accessToken: string) {
     const payload = this.jwtService.verify(accessToken, {
       secret: this.appConfig.USER_JWT_SECRET,
@@ -173,7 +163,7 @@ export class UserAuthService {
 
     return payload;
   }
-
+  // Generate Email Verification Code
   public async generateEmailVerificationCode(email: string, attempts?: string) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -184,7 +174,7 @@ export class UserAuthService {
 
     return code;
   }
-
+  //  Validate Email Verification Code
   public async validateEmailVerificationCode({ email, code }: VerifyEmailDto) {
     const storedCode = await this.redis.get(`${email}-verify`);
 
@@ -194,33 +184,7 @@ export class UserAuthService {
 
     await Promise.all([this.redis.del(`${email}-verify`), this.redis.del(`${email}-trials`)]);
   }
-
-  // BASE AUTH
-
-  async handleUserLoginAndGenerateTokens(userId: string | Types.ObjectId) {
-    const user = await this.userModel.findById(userId).select({ _id: 1, email: 1, passwordReset: 1, lastLogin: 1 });
-
-    if (user.lastLogin === null) {
-      user.set({ lastLogin: new Date() });
-      await user.save();
-
-      user.lastLogin = null;
-
-      return {
-        user,
-        ...(await this.generateTokens(user)),
-      };
-    }
-
-    user.set({ lastLogin: new Date() });
-    await user.save();
-
-    return {
-      user,
-      ...(await this.generateTokens(user)),
-    };
-  }
-
+  // Generate Access Token
   async generateAccessToken(user: HydratedDocument<User>, existingSessionId?: string) {
     const userId = user._id;
 
@@ -241,7 +205,7 @@ export class UserAuthService {
       sessionId: sessionId,
     };
   }
-
+  // Create Session
   async createSession(user: HydratedDocument<User>) {
     const session = uuidV5(uuidV4(), uuidV4());
 
@@ -249,7 +213,20 @@ export class UserAuthService {
 
     return session;
   }
+  // Generate Tokens
+  async generateTokens(user: HydratedDocument<User>) {
+    // Generate an access token with a new session ID
+    const { accessToken, sessionId: newSessionId } = await this.generateAccessToken(user);
 
+    // Generate a refresh token using the user and session ID
+    const { refreshToken } = await this.generateRefreshToken(user, newSessionId);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+  // Generate Refresh Token
   async generateRefreshToken(user: HydratedDocument<User>, sessionId: string) {
     const refreshToken = this.jwtService.sign(
       { sessionId, _id: user._id },
@@ -263,18 +240,7 @@ export class UserAuthService {
       refreshToken,
     };
   }
-
-  async generateTokens(user: HydratedDocument<User>) {
-    const { accessToken, sessionId: newSessionId } = await this.generateAccessToken(user);
-
-    const { refreshToken } = await this.generateRefreshToken(user, newSessionId);
-
-    return {
-      accessToken,
-      refreshToken,
-    };
-  }
-
+  // Generate Temp Access Token
   generateTempAccessToken(userId: string) {
     const payload: ITempAccessTokenPayload = {
       _id: userId,
@@ -286,64 +252,4 @@ export class UserAuthService {
       expiresIn: '10m',
     });
   }
-
-  async generatePresignedUrl({ filename }: GetMediaPreSignedUrlQueryDto) {
-    const fileExtension = filename.split('.').pop();
-
-    if (!fileExtension) {
-      throw new BadRequestException(errorManager.FILE_EXTENSION_REQUIRED);
-    }
-
-    const userId = this.generateUniqueId(); // Replace this with your logic to generate a unique identifier
-    const revisedFilename = `user-profile-${userId}-${Date.now()}.${fileExtension}`;
-    const filePath = `${userId}/media/${revisedFilename}`;
-    const preSignedUrl = await this.s3Service.generatePresignedUrl(filePath);
-    const cloudFrontUrl = `${this.appConfig.MEDIA_DOMAIN}/${filePath}`;
-
-    return {
-      preSignedUrl,
-      cloudFrontUrl,
-    };
-  }
-
-  public generateUniqueId(): string {
-    const timestamp = Date.now().toString(36); // Convert timestamp to base36 string
-    const randomPart = Math.random().toString(36).substring(2, 8); // Random string
-    const uniqueId = timestamp + randomPart;
-
-    return uniqueId;
-  }
-
-  // async logout(userJWT: UserJwtPersona, { fcmToken }: UserLogoutDto) {
-  //   const { _id, sessionId } = userJWT;
-
-  //   if (fcmToken) {
-  //     await this.unregisterFCMToken(_id, fcmToken);
-  //   }
-
-  //   const removeResult = await this.redis.lrem(_id, 0, sessionId);
-
-  //   if (removeResult === 0) {
-  //     throw new UnauthorizedException(
-  //       new CustomError({
-  //         localizedMessage: {
-  //           en: 'Invalid session',
-  //           ar: 'جلسة غير صالحة',
-  //         },
-  //         event: 'INVALID_SESSION',
-  //         errorType: ErrorType.UNAUTHORIZED,
-  //       }),
-  //     );
-  //   }
-  // }
-
-  // private async unregisterFCMToken(userId: string, fcmToken: string) {
-  //   const userFCMToken = await this.userFCMTokenModel.findOne({
-  //     user: new Types.ObjectId(userId),
-  //     fcmToken,
-  //   });
-  //   console.log(userFCMToken);
-  //   if (!userFCMToken) return;
-  //   await userFCMToken.deleteOne();
-  // }
 }

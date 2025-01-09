@@ -1,5 +1,5 @@
 import { EnvironmentEnum } from '@common/enums';
-import { UserJwtPersona, AdminJwtPersona, ServiceProviderJwtPersona } from '@common/interfaces/jwt-persona';
+import { UserJwtPersona } from '@common/interfaces/jwt-persona';
 import { PersonaTypeEnum } from '@common/interfaces/jwt-persona/base-jwt-persona.interface';
 import { AppConfig } from '@common/modules/env-config/services/app-config';
 import * as logDNA from '@logdna/logger';
@@ -42,24 +42,19 @@ export class CustomLoggerService extends ConsoleLogger {
 
   constructor(@Inject(INQUIRER) private parentClass: object, private appConfig: AppConfig) {
     super();
-
     this.setContext(this.parentClass?.constructor?.name);
     const appName = `od-${this.appConfig.NODE_ENV}-backend`;
 
-    let macAddress: string;
-    let ipAddress: string;
-    if (os.networkInterfaces().eth0?.length > 0) {
-      macAddress = os.networkInterfaces().eth0[0].mac;
-      ipAddress = os.networkInterfaces().eth0[0].address;
-    } else if (os.networkInterfaces()['Ethernet']?.length > 0) {
-      macAddress = os.networkInterfaces()['Ethernet'][1].mac;
-      ipAddress = os.networkInterfaces()['Ethernet'][1].address;
-    } else if (os.networkInterfaces()['Wi-Fi']?.length > 0) {
-      macAddress = os.networkInterfaces()['Wi-Fi'][1].mac;
-      ipAddress = os.networkInterfaces()['Wi-Fi'][1].address;
-    } else {
-      macAddress = '';
-      ipAddress = '';
+    let macAddress = '';
+    let ipAddress = '';
+    const networkInterfaces = os.networkInterfaces();
+
+    for (const iface of Object.values(networkInterfaces)) {
+      if (iface?.[0]) {
+        macAddress = iface[0].mac;
+        ipAddress = iface[0].address;
+        break;
+      }
     }
 
     const logger = logDNA.createLogger(this.appConfig.LOGDNA_KEY, {
@@ -81,7 +76,7 @@ export class CustomLoggerService extends ConsoleLogger {
           ? [
               new Transport({
                 log: ({ message, level, metadata }, callback) => {
-                  logger.log(message, { level: this.decolorize(level), ...(!!metadata && { meta: metadata }) });
+                  logger.log(message, { level: this.decolorize(level), ...(metadata && { meta: metadata }) });
                   callback();
                 },
               }),
@@ -94,87 +89,43 @@ export class CustomLoggerService extends ConsoleLogger {
 
   log(message: any, optionalParams?: any) {
     this.winstonInstance.log('info', message, {
-      metadata: {
-        context: this.context,
-        ...optionalParams,
-      },
+      metadata: { context: this.context, ...optionalParams },
     });
   }
 
   error(message: any, optionalParams?: any) {
-    const errorMessage = message;
-
-    this.winstonInstance.log('error', errorMessage, {
-      metadata: {
-        context: this.context,
-        ...optionalParams,
-      },
+    this.winstonInstance.log('error', message, {
+      metadata: { context: this.context, ...optionalParams },
     });
   }
 
   warn(message: any, optionalParams?: any) {
     this.winstonInstance.log('warn', message, {
-      metadata: {
-        context: this.context,
-        ...optionalParams,
-      },
+      metadata: { context: this.context, ...optionalParams },
     });
   }
 
   debug(message: any, optionalParams?: any) {
     this.winstonInstance.log('debug', message, {
-      metadata: {
-        context: this.context,
-        ...optionalParams,
-      },
+      metadata: { context: this.context, ...optionalParams },
     });
   }
 
   verbose(message: any, optionalParams?: any) {
     this.winstonInstance.log('verbose', message, {
-      metadata: {
-        context: this.context,
-        ...optionalParams,
-      },
+      metadata: { context: this.context, ...optionalParams },
     });
   }
 
   generateLogMessage(req: Request, resStatusCode: number) {
     const { method, url, persona } = req;
+    const personaInfo = this.isPersonaUser(persona) ? persona.email : '(Unknown Persona)';
 
-    const personaWithRole = this.getPersonaWithRole(persona);
-
-    return `${personaWithRole} hit ${method} ${url} with status code ${resStatusCode}`;
-  }
-
-  getPersonaWithRole(persona: UserJwtPersona | AdminJwtPersona | ServiceProviderJwtPersona) {
-    const role = this.getRole(persona);
-
-    if (this.isPersonaUser(persona)) {
-      return `${role} ${persona.email}`;
-    } else if (this.isPersonaAdmin(persona)) {
-      return `${role} ${persona.name.ar} ${persona.name.en}`;
-    } else {
-      return '(Unknown Persona)';
-    }
-  }
-
-  getRole(persona: UserJwtPersona | AdminJwtPersona | ServiceProviderJwtPersona) {
-    if (this.isPersonaUser(persona)) {
-      return PersonaTypeEnum.USER;
-    } else if (this.isPersonaAdmin(persona)) {
-      return PersonaTypeEnum.ADMIN;
-    } else {
-      return 'unknown';
-    }
+    return `${personaInfo} hit ${method} ${url} with status code ${resStatusCode}`;
   }
 
   private isPersonaUser(persona: any): persona is UserJwtPersona {
     return !!(persona?.type === PersonaTypeEnum.USER);
-  }
-
-  private isPersonaAdmin(persona: any): persona is AdminJwtPersona {
-    return !!(persona?.type === PersonaTypeEnum.ADMIN);
   }
 
   private decolorize(message: string) {

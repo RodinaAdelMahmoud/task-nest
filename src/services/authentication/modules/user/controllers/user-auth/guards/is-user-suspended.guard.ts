@@ -1,8 +1,7 @@
 import { ModelNames, CustomError, ErrorType, UserJwtPersona } from '@common';
-import { IUserModel, UserStatusEnum } from '@common/schemas/mongoose/user';
+import { IUserModel } from '@common/schemas/mongoose/user';
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Inject } from '@nestjs/common';
 import { Request } from 'express';
-
 
 @Injectable()
 export class UserSuspendedGuard implements CanActivate {
@@ -28,18 +27,18 @@ export class UserSuspendedGuard implements CanActivate {
       );
     }
 
-    if (user.status === UserStatusEnum.SUSPENDED) {
-      throw new ForbiddenException(
-        new CustomError({
-          localizedMessage: {
-            en: 'User is suspended',
-            ar: 'تم تعليق حساب المستخدم',
-          },
-          event: 'FORBIDDEN',
-          errorType: ErrorType.UNAUTHORIZED,
-        }),
-      );
-    }
+    // if (user.status === UserStatusEnum.SUSPENDED) {
+    //   throw new ForbiddenException(
+    //     new CustomError({
+    //       localizedMessage: {
+    //         en: 'User is suspended',
+    //         ar: 'تم تعليق حساب المستخدم',
+    //       },
+    //       event: 'FORBIDDEN',
+    //       errorType: ErrorType.UNAUTHORIZED,
+    //     }),
+    //   );
+    // }
 
     return true;
   }

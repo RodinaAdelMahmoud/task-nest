@@ -99,4 +99,12 @@ export const errorManager = {
     event: 'EMAIL_ALREADY_EXISTS',
     errorType: ErrorType.WRONG_INPUT,
   }),
+  CATEGORY_NOT_FOUND: new CustomError({
+    localizedMessage: {
+      en: 'category Not Found',
+      ar: 'الفئة غير موجودة',
+    },
+    event: 'Not_Found',
+    errorType: ErrorType.WRONG_INPUT,
+  }),
 };
